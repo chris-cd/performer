@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Core Chord Monitor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Oswald:wght@600;700&family=Roboto:wght@700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script type="module" src="script.js"></script>
+</head>
+<body data-theme="bw-dark" data-font="system">
+    
+    <button id="settings-toggle" aria-label="Open Settings Menu">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="cog-icon">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+    </button>
+
+    <div id="settings-overlay" class="hidden">
+        <div id="settings-card">
+            <h2>Performance Control Panel</h2>
+            <hr>
+            
+            <div class="setting-row">
+                <label for="set-prev-chord">Display Previous Chord Column</label>
+                <input type="checkbox" id="set-prev-chord" checked>
+            </div>
+
+            <div class="setting-row">
+                <label for="set-composition">Lower Chord Composition View</label>
+                <select id="set-composition">
+                    <option value="degrees">Scale Degrees (1, 3b, 5)</option>
+                    <option value="notes">Raw Pitch Names (A, C#, E)</option>
+                    <option value="false">Disabled / Hidden</option>
+                </select>
+            </div>
+
+            <div class="setting-row">
+                <label for="set-theme">Visual Interface Color Scheme</label>
+                <select id="set-theme">
+                    <optgroup label="Dark Themes (Stage Standard)">
+                        <option value="bw-dark">Black & White (Dark)</option>
+                        <option value="hc-dark">High Contrast Highlight (Dark)</option>
+                        <option value="blue-dark">Matrix Blue (Dark)</option>
+                        <option value="red-dark">Darkroom Red (Dark)</option>
+                        <option value="green-dark">Tactical Green (Dark)</option>
+                    </optgroup>
+                    <optgroup label="Light Themes (Inversed Inversions)">
+                        <option value="bw-light">Black & White (Light)</option>
+                        <option value="hc-light">High Contrast Highlight (Light)</option>
+                        <option value="blue-light">Matrix Blue (Light)</option>
+                        <option value="red-light">Darkroom Red (Light)</option>
+                        <option value="green-light">Tactical Green (Light)</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <div class="setting-row">
+                <label for="set-font">Screen Typography</label>
+                <select id="set-font">
+                    <option value="system">System Default Sans</option>
+                    <option value="roboto">Roboto Condensed</option>
+                    <option value="montserrat">Montserrat Bold</option>
+                    <option value="oswald">Oswald Industrial</option>
+                </select>
+            </div>
+
+            <div class="setting-row slider-block">
+                <label>Font Scaling Limits (Viewport Width %)</label>
+                <div class="slider-container">
+                    <span>Min: <span id="min-font-val">6</span>vw</span>
+                    <input type="range" id="set-min-font" min="4" max="12" step="0.5" value="6">
+                </div>
+                <div class="slider-container">
+                    <span>Max: <span id="max-font-val">20</span>vw</span>
+                    <input type="range" id="set-max-font" min="12" max="28" step="0.5" value="20">
+                </div>
+            </div>
+
+            <button id="settings-close">Save Changes & Close</button>
+        </div>
+    </div>
+
+    <div id="app-container">
+        <div id="left-zone" class="zone">
+            <div class="label">PREVIOUS</div>
+            <div id="prev-chord" class="chord-text">—</div>
+        </div>
+        
+        <div id="right-zone" class="zone">
+            <div class="label">CURRENT</div>
+            <div id="current-chord" class="chord-text">—</div>
+            <div id="note-composition-container"></div>
+            
+            <div id="live-notes-container"></div>
+        </div>
+    </div>
+
+</body>
+</html>
