@@ -1,9 +1,9 @@
 // --- LOCALIZED IMPORTS WITH MULTIPLE FILE SHARING REMOVED ---
 import { Midi, Chord } from "./tonal.js"; 
-import { bestChordFilter } from "./chordEngine.js";
+import { bestChordFilter, checkRootlessShellChords } from "./chordEngine.js";
 
 const BUFFER_WINDOW_MS = 90; 
-const MAX_WATERFALL_ROWS = 15; // Retain a long history row block index in memory
+const MAX_WATERFALL_ROWS = 15; 
 
 let activeNotes = new Set();
 let instantFrameNotes = new Set();
@@ -18,7 +18,7 @@ const settings = {
     theme: localStorage.getItem("set-theme") || "bw-dark",
     font: localStorage.getItem("set-font") || "system",
     minFont: parseFloat(localStorage.getItem("set-min-font")) || 6,
-    maxFont: parseFloat(localStorage.getItem("set-max-font")) || 25 
+    maxFont: parseFloat(localStorage.getItem("set-max-font")) || 38 
 };
 
 const currentDisplay = document.getElementById("current-chord");
@@ -62,35 +62,24 @@ function handleMIDIMessage(message) {
 function triggerBuffer() {
     if (bufferTimeout) clearTimeout(bufferTimeout);
     bufferTimeout = setTimeout(() => {
-        // Step 1: Analyze frame inputs and compute chord definitions
         const newlyDetectedChord = processChords();
-        
-        // Step 2: Push elements out to the shared timeline cascade
         commitInstantSnapshotToWaterfall(newlyDetectedChord);
     }, BUFFER_WINDOW_MS);
 }
 
-/**
- * UNIFIED TIMELINE WATERFALL LEDGER:
- * Injects raw note strings from low-to-high. If a validated chord object 
- * was resolved during this snapshot interval, it adds a dedicated chord name row above it.
- */
 function commitInstantSnapshotToWaterfall(confirmedChordName) {
     if (instantFrameNotes.size === 0) return;
 
     const sortedFramePitches = Array.from(instantFrameNotes).sort((a, b) => a - b);
     instantFrameNotes.clear();
 
-    // A: If a new 3+ note chord was accepted, drop the Chord Header item first
     if (confirmedChordName) {
         const chordRowEl = document.createElement("div");
         chordRowEl.classList.add("waterfall-chord-row");
         chordRowEl.textContent = confirmedChordName;
-        
         insertAtTop(chordRowEl);
     }
 
-    // B: Drop the Raw Note Brick collection layout right underneath/simultaneously
     const notesRowEl = document.createElement("div");
     notesRowEl.classList.add("waterfall-row");
     
@@ -110,7 +99,6 @@ function commitInstantSnapshotToWaterfall(confirmedChordName) {
 
     insertAtTop(notesRowEl);
 
-    // Run real-time performance frame index limits to keep execution efficient
     while (waterfallTerminal.children.length > MAX_WATERFALL_ROWS) {
         waterfallTerminal.removeChild(waterfallTerminal.lastChild);
     }
@@ -125,28 +113,47 @@ function insertAtTop(element) {
 }
 
 function processChords() {
+    // If no keys are being held down, clean reset the engine state entirely
     if (activeNotes.size === 0) {
+        currentChordName = "";
+        currentChordObject = null;
+        rawMidiPitches = [];
         updateUI();
         return null;
     }
 
     rawMidiPitches = Array.from(activeNotes).sort((a, b) => a - b);
     const noteNamesWithOctaves = rawMidiPitches.map(midi => Midi.midiToNoteName(midi));
-    const uniqueNoteLetters = new Set(noteNamesWithOctaves.map(n => n.replace(/\d/, '')));
+    const uniqueNoteLetters = Array.from(new Set(noteNamesWithOctaves.map(n => n.replace(/\d/, ''))));
     const lowestNoteName = noteNamesWithOctaves[0].replace(/\d/, '');
 
-    const detectedChords = Chord.detect(noteNamesWithOctaves);
-    let chordNameToReturn = null;
+    // FIX STEP 1: Always test custom extension shells first before checking standard libraries
+    const upperLetters = uniqueNoteLetters.map(n => n.toUpperCase());
+    const fallbackShell = checkRootlessShellChords(upperLetters);
 
-    if (detectedChords && detectedChords.length > 0) {
-        let selectedChord = bestChordFilter(detectedChords, lowestNoteName, activeNotes.size, Array.from(uniqueNoteLetters));
-        
-        if (selectedChord && selectedChord !== currentChordName) {
-            currentChordName = selectedChord;
-            currentChordObject = Chord.get(currentChordName); 
-            // Return this token string to notify the waterfall to commit a header block
+    let finalResolvedName = null;
+
+    if (fallbackShell) {
+        finalResolvedName = fallbackShell;
+    } else {
+        // FIX STEP 2: Use Tonal.js detection as a secondary fallback choice
+        const detectedChords = Chord.detect(noteNamesWithOctaves);
+        if (detectedChords && detectedChords.length > 0) {
+            finalResolvedName = bestChordFilter(detectedChords, lowestNoteName, activeNotes.size, uniqueNoteLetters);
+        }
+    }
+
+    // FIX STEP 3: If both lookups fail, force wipe old data so the display doesn't repeat old positions
+    let chordNameToReturn = null;
+    if (finalResolvedName) {
+        if (finalResolvedName !== currentChordName) {
+            currentChordName = finalResolvedName;
+            currentChordObject = Chord.get(currentChordName);
             chordNameToReturn = currentChordName;
         }
+    } else {
+        currentChordName = "";
+        currentChordObject = null;
     }
     
     updateUI();
@@ -178,7 +185,8 @@ function updateUI() {
             if (settings.composition === "notes") {
                 noteBox.textContent = styledName;
             } else if (settings.composition === "degrees" && currentChordObject) {
-                const intervalDistance = currentChordObject.intervals[index] || "•";
+                // Safe check if interval array mapping exists for custom manual shell entries
+                const intervalDistance = (currentChordObject.intervals && currentChordObject.intervals[index]) ? currentChordObject.intervals[index] : "•";
                 noteBox.textContent = intervalDistance;
             }
 
@@ -198,7 +206,7 @@ function adjustFontSize(element) {
 
     let size = settings.maxFont; 
     element.style.fontSize = size + "vw";
-    const maxPermittedWidth = parent.clientWidth * 0.88;
+    const maxPermittedWidth = parent.clientWidth * 0.94;
 
     while (element.scrollWidth > maxPermittedWidth && size > settings.minFont) {
         size -= 0.5;

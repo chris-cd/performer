@@ -66,38 +66,6 @@ body[data-theme="bw-light"] {
     --wf-row-bg: #fdfdfd; --wf-note-bg: #eeeeee;
     --wf-chord-bg: #0d0d0d; --wf-chord-txt: #ffffff;
 }
-body[data-theme="hc-light"] {
-    --bg-main: #00ff55; --bg-alt: #1aff66; --border: #00cc44;
-    --txt-primary: #000000; --txt-dim: rgba(0, 0, 0, 0.4); 
-    --box-bg: #00e64d; --box-txt: #000000; 
-    --bass-bg: #000000; --bass-txt: #00ff55;
-    --wf-row-bg: #0df24f; --wf-note-bg: #00d944;
-    --wf-chord-bg: #000000; --wf-chord-txt: #00ff55;
-}
-body[data-theme="blue-light"] {
-    --bg-main: #38b6ff; --bg-alt: #5cc2ff; --border: #1a9be6;
-    --txt-primary: #020b14; --txt-dim: rgba(2, 11, 20, 0.4); 
-    --box-bg: #1fafff; --box-txt: #020b14; 
-    --bass-bg: #020b14; --bass-txt: #38b6ff;
-    --wf-row-bg: #4bc0ff; --wf-note-bg: #2baff5;
-    --wf-chord-bg: #020b14; --wf-chord-txt: #38b6ff;
-}
-body[data-theme="red-light"] {
-    --bg-main: #ff3333; --bg-alt: #ff5c5c; --border: #e61a1a;
-    --txt-primary: #100000; --txt-dim: rgba(16, 0, 0, 0.4); 
-    --box-bg: #ff1f1f; --box-txt: #100000; 
-    --bass-bg: #100000; --bass-txt: #ff3333;
-    --wf-row-bg: #ff4747; --wf-note-bg: #f52222;
-    --wf-chord-bg: #100000; --wf-chord-txt: #ff3333;
-}
-body[data-theme="green-light"] {
-    --bg-main: #a3ff00; --bg-alt: #b5ff33; --border: #8bcc00;
-    --txt-primary: #050a05; --txt-dim: rgba(5, 10, 5, 0.4); 
-    --box-bg: #96f000; --box-txt: #050a05; 
-    --bass-bg: #050a05; --bass-txt: #a3ff00;
-    --wf-row-bg: #abff1f; --wf-note-bg: #8ed600;
-    --wf-chord-bg: #050a05; --wf-chord-txt: #a3ff00;
-}
 
 /* --- SYSTEM TYPOGRAPHY STACK MOTIFS --- */
 body[data-font="system"] { font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
@@ -123,16 +91,16 @@ body[data-font="oswald"] { font-family: 'Oswald', sans-serif; }
     overflow: hidden;
 }
 
-/* 65% / 35% Layout Optimized Breakpoints */
+/* 70% / 30% Setup: Prioritizes massive visibility for the center layout */
 #center-zone {
-    width: 65%;
-    max-width: 65%;
+    width: 70%;
+    max-width: 70%;
     background-color: var(--bg-main);
 }
 
 #waterfall-zone {
-    width: 35%;
-    max-width: 35%;
+    width: 30%;
+    max-width: 30%;
     background-color: var(--bg-alt);
     border-left: 2px solid var(--border);
 }
@@ -140,7 +108,7 @@ body[data-font="oswald"] { font-family: 'Oswald', sans-serif; }
 .label {
     position: absolute;
     top: 4vh;
-    font-size: 0.95vw;
+    font-size: 0.85vw;
     font-weight: 800;
     letter-spacing: 0.3em;
     color: var(--txt-dim);
@@ -148,12 +116,13 @@ body[data-font="oswald"] { font-family: 'Oswald', sans-serif; }
 
 .chord-text {
     font-weight: 900;
-    line-height: 1;
+    line-height: 0.9;
     white-space: nowrap;
     text-align: center;
-    width: 95%;
+    width: 96%;
     display: block;
-    transition: opacity 0.2s ease, font-size 0.05s ease;
+    /* SLOWED DOWN BY HALF: Increased from 0.2s to 0.4s for a smooth, lingering decay */
+    transition: opacity 0.4s ease, font-size 0.05s ease;
 }
 #current-chord { color: var(--txt-primary); }
 
@@ -162,20 +131,21 @@ body[data-font="oswald"] { font-family: 'Oswald', sans-serif; }
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
-    gap: 1vw;
-    width: 90%;
-    margin-top: 5vh;
+    gap: 0.8vw;
+    width: 92%;
+    margin-top: 6vh;
     min-height: 8vh;
-    transition: opacity 0.2s ease;
+    /* SLOWED DOWN BY HALF: Transitions track chord opacity timing at 0.4s */
+    transition: opacity 0.4s ease;
 }
 
 .note-box {
     background-color: var(--box-bg);
     color: var(--box-txt);
     border: 2px solid var(--border);
-    padding: 1.2vh 2.2vw;
+    padding: 1.4vh 2.4vw;
     border-radius: 8px;
-    font-size: 1.8vw;
+    font-size: 2vw;
     font-weight: 800;
     text-align: center;
     display: flex;
@@ -206,7 +176,6 @@ body[data-font="oswald"] { font-family: 'Oswald', sans-serif; }
     -webkit-mask-image: linear-gradient(to bottom, #000 74%, transparent 100%);
 }
 
-/* Shared waterfall block formatting */
 .waterfall-row, .waterfall-chord-row {
     width: 92%;
     flex-shrink: 0;
@@ -218,10 +187,9 @@ body[data-font="oswald"] { font-family: 'Oswald', sans-serif; }
     to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* Raw MIDI Note Matrix Bricks Layout row */
 .waterfall-row {
-    min-height: 5vh;
-    max-height: 5vh;
+    min-height: 4.8vh;
+    max-height: 4.8vh;
     background-color: var(--wf-row-bg);
     border: 1px solid var(--border);
     border-radius: 6px;
@@ -238,23 +206,22 @@ body[data-font="oswald"] { font-family: 'Oswald', sans-serif; }
     color: var(--txt-primary);
     font-size: 1.1vw;
     font-weight: 900;
-    padding: 0.5vh 1vw;
+    padding: 0.4vh 0.8vw;
     border-radius: 4px;
     text-align: center;
-    min-width: 3.4vw;
+    min-width: 3.2vw;
 }
 
-/* Resolved Unified Stage Chord Block inside the ledger column */
 .waterfall-chord-row {
-    min-height: 5.6vh;
-    max-height: 5.6vh;
+    min-height: 5.4vh;
+    max-height: 5.4vh;
     background-color: var(--wf-chord-bg);
     border: 1px solid var(--border);
     border-radius: 6px;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 1.6vw;
+    font-size: 1.5vw;
     font-weight: 900;
     color: var(--wf-chord-txt);
     letter-spacing: 0.04em;
@@ -262,7 +229,6 @@ body[data-font="oswald"] { font-family: 'Oswald', sans-serif; }
     margin-top: 0.4vh;
 }
 
-/* Polyphonic count micro-borders */
 .waterfall-row[data-count="1"] { border-left: 5px solid var(--txt-dim); }
 .waterfall-row[data-count="2"] { border-left: 5px solid var(--txt-primary); }
 .waterfall-row[data-count="3"] .wf-note-brick,
