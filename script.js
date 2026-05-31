@@ -3,31 +3,27 @@ import { Midi, Chord } from "./tonal.js";
 import { bestChordFilter } from "./chordEngine.js";
 
 const BUFFER_WINDOW_MS = 90; 
+const MAX_WATERFALL_ROWS = 15; // Retain a long history row block index in memory
 
 let activeNotes = new Set();
-// Historical cache to keep notes visible but dimmed when you lift your hands
-let cachedSortedNotes = [];
+let instantFrameNotes = new Set();
 
 let currentChordName = "";
-let previousChordName = "";
 let rawMidiPitches = []; 
 let currentChordObject = null; 
 let bufferTimeout = null;
 
 const settings = {
-    prevChord: localStorage.getItem("set-prev-chord") !== "false",
     composition: localStorage.getItem("set-composition") || "degrees",
     theme: localStorage.getItem("set-theme") || "bw-dark",
     font: localStorage.getItem("set-font") || "system",
     minFont: parseFloat(localStorage.getItem("set-min-font")) || 6,
-    maxFont: parseFloat(localStorage.getItem("set-max-font")) || 20 
+    maxFont: parseFloat(localStorage.getItem("set-max-font")) || 25 
 };
 
 const currentDisplay = document.getElementById("current-chord");
-const prevDisplay = document.getElementById("prev-chord");
 const noteContainer = document.getElementById("note-composition-container");
-const liveNotesRow = document.getElementById("live-notes-container");
-const leftZone = document.getElementById("left-zone");
+const waterfallTerminal = document.getElementById("waterfall-terminal");
 
 const toggleBtn = document.getElementById("settings-toggle");
 const overlay = document.getElementById("settings-overlay");
@@ -54,6 +50,7 @@ function handleMIDIMessage(message) {
 
     if (command === 0x90 && velocity > 0) {
         activeNotes.add(note);
+        instantFrameNotes.add(note);
         triggerBuffer();
     } 
     else if (command === 0x80 || (command === 0x90 && velocity === 0)) {
@@ -65,79 +62,99 @@ function handleMIDIMessage(message) {
 function triggerBuffer() {
     if (bufferTimeout) clearTimeout(bufferTimeout);
     bufferTimeout = setTimeout(() => {
-        processChords();
-        updateLiveNotesUI();
+        // Step 1: Analyze frame inputs and compute chord definitions
+        const newlyDetectedChord = processChords();
+        
+        // Step 2: Push elements out to the shared timeline cascade
+        commitInstantSnapshotToWaterfall(newlyDetectedChord);
     }, BUFFER_WINDOW_MS);
+}
+
+/**
+ * UNIFIED TIMELINE WATERFALL LEDGER:
+ * Injects raw note strings from low-to-high. If a validated chord object 
+ * was resolved during this snapshot interval, it adds a dedicated chord name row above it.
+ */
+function commitInstantSnapshotToWaterfall(confirmedChordName) {
+    if (instantFrameNotes.size === 0) return;
+
+    const sortedFramePitches = Array.from(instantFrameNotes).sort((a, b) => a - b);
+    instantFrameNotes.clear();
+
+    // A: If a new 3+ note chord was accepted, drop the Chord Header item first
+    if (confirmedChordName) {
+        const chordRowEl = document.createElement("div");
+        chordRowEl.classList.add("waterfall-chord-row");
+        chordRowEl.textContent = confirmedChordName;
+        
+        insertAtTop(chordRowEl);
+    }
+
+    // B: Drop the Raw Note Brick collection layout right underneath/simultaneously
+    const notesRowEl = document.createElement("div");
+    notesRowEl.classList.add("waterfall-row");
+    
+    const polyphonyCount = sortedFramePitches.length;
+    notesRowEl.setAttribute("data-count", polyphonyCount > 6 ? 6 : polyphonyCount);
+
+    sortedFramePitches.forEach(midi => {
+        const brickEl = document.createElement("div");
+        brickEl.classList.add("wf-note-brick");
+
+        let noteName = Midi.midiToNoteName(midi).replace(/\d/, '');
+        noteName = noteName.substring(0, 1).toUpperCase() + noteName.substring(1);
+        
+        brickEl.textContent = noteName;
+        notesRowEl.appendChild(brickEl);
+    });
+
+    insertAtTop(notesRowEl);
+
+    // Run real-time performance frame index limits to keep execution efficient
+    while (waterfallTerminal.children.length > MAX_WATERFALL_ROWS) {
+        waterfallTerminal.removeChild(waterfallTerminal.lastChild);
+    }
+}
+
+function insertAtTop(element) {
+    if (waterfallTerminal.firstChild) {
+        waterfallTerminal.insertBefore(element, waterfallTerminal.firstChild);
+    } else {
+        waterfallTerminal.appendChild(element);
+    }
 }
 
 function processChords() {
     if (activeNotes.size === 0) {
         updateUI();
-        return;
+        return null;
     }
 
     rawMidiPitches = Array.from(activeNotes).sort((a, b) => a - b);
-    cachedSortedNotes = [...rawMidiPitches]; // Keep memory safe for display dimming
-
     const noteNamesWithOctaves = rawMidiPitches.map(midi => Midi.midiToNoteName(midi));
     const uniqueNoteLetters = new Set(noteNamesWithOctaves.map(n => n.replace(/\d/, '')));
     const lowestNoteName = noteNamesWithOctaves[0].replace(/\d/, '');
 
     const detectedChords = Chord.detect(noteNamesWithOctaves);
+    let chordNameToReturn = null;
 
     if (detectedChords && detectedChords.length > 0) {
         let selectedChord = bestChordFilter(detectedChords, lowestNoteName, activeNotes.size, Array.from(uniqueNoteLetters));
         
         if (selectedChord && selectedChord !== currentChordName) {
-            previousChordName = currentChordName || previousChordName;
             currentChordName = selectedChord;
             currentChordObject = Chord.get(currentChordName); 
+            // Return this token string to notify the waterfall to commit a header block
+            chordNameToReturn = currentChordName;
         }
     }
+    
     updateUI();
-}
-
-/**
- * LOW-TO-HIGH POLYPHONIC ENGINE:
- * Takes the active or last-played note sequence, formats them beautifully
- * with sharp/flat handling, and appends them left-to-right on your screen.
- */
-function updateLiveNotesUI() {
-    // If there's no data yet, leave it empty
-    if (cachedSortedNotes.length === 0) {
-        liveNotesRow.innerHTML = "";
-        return;
-    }
-
-    liveNotesRow.innerHTML = "";
-    const systemIsQuiet = (activeNotes.size === 0);
-
-    cachedSortedNotes.forEach((midi) => {
-        const slotEl = document.createElement("div");
-        slotEl.classList.add("live-note-slot");
-
-        // Format pitch name clean (e.g. "c#4" -> "C#")
-        let noteName = Midi.midiToNoteName(midi).replace(/\d/, '');
-        noteName = noteName.substring(0, 1).toUpperCase() + noteName.substring(1);
-        slotEl.textContent = noteName;
-
-        if (systemIsQuiet) {
-            // Hands lifted completely: Dim layout block elements
-            slotEl.classList.add("is-dimmed");
-        } else if (!activeNotes.has(midi)) {
-            // This specific pitch was released while others remain held down
-            slotEl.classList.add("is-dimmed");
-        }
-
-        liveNotesRow.appendChild(slotEl);
-    });
+    return chordNameToReturn;
 }
 
 function updateUI() {
     currentDisplay.textContent = currentChordName ? currentChordName : "—";
-    prevDisplay.textContent = previousChordName ? previousChordName : "—";
-
-    leftZone.classList.toggle("hidden", !settings.prevChord);
 
     if (activeNotes.size === 0 && currentChordName) {
         currentDisplay.style.opacity = "0.25";
@@ -172,7 +189,6 @@ function updateUI() {
 
     setTimeout(() => {
         adjustFontSize(currentDisplay);
-        adjustFontSize(prevDisplay);
     }, 0);
 }
 
@@ -191,7 +207,6 @@ function adjustFontSize(element) {
 }
 
 function initializeSettingsPanel() {
-    document.getElementById("set-prev-chord").checked = settings.prevChord;
     document.getElementById("set-composition").value = settings.composition;
     document.getElementById("set-theme").value = settings.theme;
     document.getElementById("set-font").value = settings.font;
@@ -205,18 +220,12 @@ function initializeSettingsPanel() {
     document.body.setAttribute("data-font", settings.font);
     
     updateUI();
-    updateLiveNotesUI();
 }
 
 toggleBtn.addEventListener("click", () => overlay.classList.remove("hidden"));
 closeBtn.addEventListener("click", () => { overlay.classList.add("hidden"); updateUI(); });
 overlay.addEventListener("click", (e) => { if (e.target === overlay) { overlay.classList.add("hidden"); updateUI(); } });
 
-document.getElementById("set-prev-chord").addEventListener("change", (e) => {
-    settings.prevChord = e.target.checked;
-    localStorage.setItem("set-prev-chord", settings.prevChord);
-    updateUI();
-});
 document.getElementById("set-composition").addEventListener("change", (e) => {
     settings.composition = e.target.value;
     localStorage.setItem("set-composition", settings.composition);
@@ -249,9 +258,7 @@ document.getElementById("set-max-font").addEventListener("input", (e) => {
 
 const resizeObserver = new ResizeObserver(() => {
     adjustFontSize(currentDisplay);
-    adjustFontSize(prevDisplay);
 });
-resizeObserver.observe(document.getElementById("left-zone"));
-resizeObserver.observe(document.getElementById("right-zone"));
+resizeObserver.observe(document.getElementById("center-zone"));
 
 initializeSettingsPanel();

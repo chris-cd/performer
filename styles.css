@@ -21,62 +21,82 @@ body[data-theme="bw-dark"] {
     --txt-primary: #ffffff; --txt-dim: rgba(255, 255, 255, 0.4); 
     --box-bg: #1c1c1c; --box-txt: #aaaaaa;
     --bass-bg: #ffffff; --bass-txt: #0d0d0d;
+    --wf-row-bg: #111111; --wf-note-bg: #222222;
+    --wf-chord-bg: #222222; --wf-chord-txt: #ffffff;
 }
 body[data-theme="hc-dark"] {
     --bg-main: #000000; --bg-alt: #0a0a0a; --border: #333333;
     --txt-primary: #00ff55; --txt-dim: rgba(0, 255, 85, 0.4); 
     --box-bg: #111111; --box-txt: #00ff55; 
     --bass-bg: #00ff55; --bass-txt: #000000;
+    --wf-row-bg: #050505; --wf-note-bg: #111111;
+    --wf-chord-bg: #00ff55; --wf-chord-txt: #000000;
 }
 body[data-theme="blue-dark"] {
     --bg-main: #020b14; --bg-alt: #041321; --border: #082947;
     --txt-primary: #38b6ff; --txt-dim: rgba(56, 182, 255, 0.4); 
     --box-bg: #051c30; --box-txt: #38b6ff; 
     --bass-bg: #38b6ff; --bass-txt: #020b14;
+    --wf-row-bg: #03101c; --wf-note-bg: #061f36;
+    --wf-chord-bg: #082947; --wf-chord-txt: #38b6ff;
 }
 body[data-theme="red-dark"] {
     --bg-main: #100000; --bg-alt: #180303; --border: #300505;
     --txt-primary: #ff3333; --txt-dim: rgba(255, 51, 51, 0.4); 
     --box-bg: #210404; --box-txt: #ff3333; 
     --bass-bg: #ff3333; --bass-txt: #100000;
+    --wf-row-bg: #140202; --wf-note-bg: #260505;
+    --wf-chord-bg: #300505; --wf-chord-txt: #ff3333;
 }
 body[data-theme="green-dark"] {
     --bg-main: #050a05; --bg-alt: #0b140b; --border: #162916;
     --txt-primary: #a3ff00; --txt-dim: rgba(163, 255, 0, 0.4); 
     --box-bg: #111f11; --box-txt: #a3ff00; 
     --bass-bg: #a3ff00; --bass-txt: #050a05;
+    --wf-row-bg: #070f07; --wf-note-bg: #142414;
+    --wf-chord-bg: #162916; --wf-chord-txt: #a3ff00;
 }
 
-/* --- THEME PALETTES: LIGHT INVERSED ENGINES --- */
+/* --- THEME PALETTES: LIGHT ENGINES --- */
 body[data-theme="bw-light"] {
     --bg-main: #ffffff; --bg-alt: #f5f5f5; --border: #dddddd;
     --txt-primary: #0d0d0d; --txt-dim: rgba(13, 13, 13, 0.4); 
     --box-bg: #e6e6e6; --box-txt: #444444;
     --bass-bg: #0d0d0d; --bass-txt: #ffffff;
+    --wf-row-bg: #fdfdfd; --wf-note-bg: #eeeeee;
+    --wf-chord-bg: #0d0d0d; --wf-chord-txt: #ffffff;
 }
 body[data-theme="hc-light"] {
     --bg-main: #00ff55; --bg-alt: #1aff66; --border: #00cc44;
     --txt-primary: #000000; --txt-dim: rgba(0, 0, 0, 0.4); 
     --box-bg: #00e64d; --box-txt: #000000; 
     --bass-bg: #000000; --bass-txt: #00ff55;
+    --wf-row-bg: #0df24f; --wf-note-bg: #00d944;
+    --wf-chord-bg: #000000; --wf-chord-txt: #00ff55;
 }
 body[data-theme="blue-light"] {
     --bg-main: #38b6ff; --bg-alt: #5cc2ff; --border: #1a9be6;
     --txt-primary: #020b14; --txt-dim: rgba(2, 11, 20, 0.4); 
     --box-bg: #1fafff; --box-txt: #020b14; 
     --bass-bg: #020b14; --bass-txt: #38b6ff;
+    --wf-row-bg: #4bc0ff; --wf-note-bg: #2baff5;
+    --wf-chord-bg: #020b14; --wf-chord-txt: #38b6ff;
 }
 body[data-theme="red-light"] {
     --bg-main: #ff3333; --bg-alt: #ff5c5c; --border: #e61a1a;
     --txt-primary: #100000; --txt-dim: rgba(16, 0, 0, 0.4); 
     --box-bg: #ff1f1f; --box-txt: #100000; 
     --bass-bg: #100000; --bass-txt: #ff3333;
+    --wf-row-bg: #ff4747; --wf-note-bg: #f52222;
+    --wf-chord-bg: #100000; --wf-chord-txt: #ff3333;
 }
 body[data-theme="green-light"] {
     --bg-main: #a3ff00; --bg-alt: #b5ff33; --border: #8bcc00;
     --txt-primary: #050a05; --txt-dim: rgba(5, 10, 5, 0.4); 
     --box-bg: #96f000; --box-txt: #050a05; 
     --bass-bg: #050a05; --bass-txt: #a3ff00;
+    --wf-row-bg: #abff1f; --wf-note-bg: #8ed600;
+    --wf-chord-bg: #050a05; --wf-chord-txt: #a3ff00;
 }
 
 /* --- SYSTEM TYPOGRAPHY STACK MOTIFS --- */
@@ -85,7 +105,7 @@ body[data-font="roboto"] { font-family: 'Roboto', sans-serif; }
 body[data-font="montserrat"] { font-family: 'Montserrat', sans-serif; }
 body[data-font="oswald"] { font-family: 'Oswald', sans-serif; }
 
-/* --- LIVE INTERFACE VIEWPORT PANEL --- */
+/* --- TWO-COLUMN STAGE SPLIT VIEWPORT GRID --- */
 #app-container {
     display: flex;
     width: 100vw;
@@ -103,28 +123,24 @@ body[data-font="oswald"] { font-family: 'Oswald', sans-serif; }
     overflow: hidden;
 }
 
-#left-zone {
+/* 65% / 35% Layout Optimized Breakpoints */
+#center-zone {
+    width: 65%;
+    max-width: 65%;
+    background-color: var(--bg-main);
+}
+
+#waterfall-zone {
     width: 35%;
     max-width: 35%;
     background-color: var(--bg-alt);
-    border-right: 2px solid var(--border);
-    transition: background-color 0.15s ease, border-color 0.15s ease;
-}
-#left-zone.hidden {
-    display: none !important;
-}
-
-#right-zone {
-    flex: 1;
-    width: 100%;
-    background-color: var(--bg-main);
-    overflow: hidden;
+    border-left: 2px solid var(--border);
 }
 
 .label {
     position: absolute;
     top: 4vh;
-    font-size: 1.2vw;
+    font-size: 0.95vw;
     font-weight: 800;
     letter-spacing: 0.3em;
     color: var(--txt-dim);
@@ -135,22 +151,20 @@ body[data-font="oswald"] { font-family: 'Oswald', sans-serif; }
     line-height: 1;
     white-space: nowrap;
     text-align: center;
-    width: 90%;
+    width: 95%;
     display: block;
     transition: opacity 0.2s ease, font-size 0.05s ease;
 }
-
-#prev-chord { color: var(--txt-dim); }
 #current-chord { color: var(--txt-primary); }
 
-/* --- DYNAMIC PIECE ENGINE DECORATIONS --- */
+/* --- DYNAMIC STAGE FORMULA BLOCKS --- */
 #note-composition-container {
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
     gap: 1vw;
     width: 90%;
-    margin-top: 4vh;
+    margin-top: 5vh;
     min-height: 8vh;
     transition: opacity 0.2s ease;
 }
@@ -159,153 +173,131 @@ body[data-font="oswald"] { font-family: 'Oswald', sans-serif; }
     background-color: var(--box-bg);
     color: var(--box-txt);
     border: 2px solid var(--border);
-    padding: 1vh 1.8vw;
+    padding: 1.2vh 2.2vw;
     border-radius: 8px;
-    font-size: 2.2vw;
+    font-size: 1.8vw;
     font-weight: 800;
     text-align: center;
     display: flex;
     align-items: center;
     justify-content: center;
     letter-spacing: 0.02em;
-    transition: all 0.15s ease;
 }
-
 .note-box.bass-note {
     background-color: var(--bass-bg);
     color: var(--bass-txt);
     border-color: var(--bass-bg);
-    transform: scale(1.05);
+    transform: scale(1.04);
 }
 
-/* --- DYNAMIC LOW-TO-HIGH POLYPHONIC ROW --- */
-#live-notes-container {
+/* --- THE REAL-TIME UNIFIED HISTORICAL WATERFALL --- */
+#waterfall-terminal {
+    width: 100%;
+    height: 80%;
+    margin-top: 6vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 0.8vh;
+    overflow-y: hidden;
+    position: relative;
+    mask-image: linear-gradient(to bottom, #000 74%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, #000 74%, transparent 100%);
+}
+
+/* Shared waterfall block formatting */
+.waterfall-row, .waterfall-chord-row {
+    width: 92%;
+    flex-shrink: 0;
+    animation: waterfallDrop 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes waterfallDrop {
+    from { opacity: 0; transform: translateY(-16px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Raw MIDI Note Matrix Bricks Layout row */
+.waterfall-row {
+    min-height: 5vh;
+    max-height: 5vh;
+    background-color: var(--wf-row-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
     display: flex;
     justify-content: center;
     align-items: center;
-    flex-wrap: nowrap;
-    gap: 1.2vw;
-    width: 90%;
-    margin-top: 5vh;
-    padding-top: 3vh;
-    border-top: 1px dashed var(--border);
-    min-height: 10vh;
+    gap: 0.4vw;
+    padding: 0 1vw;
 }
 
-.live-note-slot {
-    background-color: var(--box-bg);
-    border: 2px solid var(--txt-primary);
+.wf-note-brick {
+    background-color: var(--wf-note-bg);
+    border: 1px solid var(--txt-dim);
     color: var(--txt-primary);
-    border-radius: 8px;
-    padding: 1.2vh 2.5vw;
-    font-size: 2vw;
+    font-size: 1.1vw;
     font-weight: 900;
+    padding: 0.5vh 1vw;
+    border-radius: 4px;
     text-align: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    transform: translateY(-4px);
-    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-    white-space: nowrap;
+    min-width: 3.4vw;
 }
 
-/* When fingers leave the instrument entirely, notes fade gracefully into a dim trace */
-.live-note-slot.is-dimmed {
-    opacity: 0.35;
-    background-color: var(--bg-alt);
-    border-color: var(--border);
-    color: var(--txt-dim);
-    transform: translateY(0);
-    box-shadow: none;
+/* Resolved Unified Stage Chord Block inside the ledger column */
+.waterfall-chord-row {
+    min-height: 5.6vh;
+    max-height: 5.6vh;
+    background-color: var(--wf-chord-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.6vw;
+    font-weight: 900;
+    color: var(--wf-chord-txt);
+    letter-spacing: 0.04em;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    margin-top: 0.4vh;
 }
 
-/* --- SETTINGS INTERFACE MANAGEMENT ENGINE OVERLAYS --- */
+/* Polyphonic count micro-borders */
+.waterfall-row[data-count="1"] { border-left: 5px solid var(--txt-dim); }
+.waterfall-row[data-count="2"] { border-left: 5px solid var(--txt-primary); }
+.waterfall-row[data-count="3"] .wf-note-brick,
+.waterfall-row[data-count="4"] .wf-note-brick,
+.waterfall-row[data-count="5"] .wf-note-brick,
+.waterfall-row[data-count="6"] .wf-note-brick {
+    border-color: var(--txt-primary);
+}
+
+/* --- OVERLAYS & SETTINGS PANEL --- */
 #settings-toggle {
     position: absolute;
-    top: 3.5vh;
-    left: 3.5vh;
-    z-index: 100;
-    background: transparent;
-    border: none;
-    width: 2.5vw;
-    height: 2.5vw;
-    min-width: 28px;
-    min-height: 28px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    outline: none;
-    padding: 0;
+    top: 3.5vh; left: 3.5vh; z-index: 100;
+    background: transparent; border: none;
+    width: 2.2vw; height: 2.2vw; min-width: 26px; min-height: 26px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
 }
-
-.cog-icon {
-    width: 100%;
-    height: 100%;
-    color: var(--txt-primary);
-    opacity: 0.5;
-    transition: opacity 0.15s ease, transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-#settings-toggle:hover .cog-icon {
-    opacity: 1;
-    transform: rotate(60deg);
-}
+.cog-icon { width: 100%; height: 100%; color: var(--txt-primary); opacity: 0.5; transition: all 0.15s ease; }
+#settings-toggle:hover .cog-icon { opacity: 1; transform: rotate(60deg); }
 
 #settings-overlay {
-    position: fixed;
-    top: 0; left: 0; width: 100vw; height: 100vh;
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    z-index: 200;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    z-index: 200; display: flex; align-items: center; justify-content: center;
 }
 #settings-overlay.hidden { display: none !important; }
 
-#settings-card {
-    background: #141414;
-    border: 1px solid #262626;
-    border-radius: 12px;
-    width: 90%; max-width: 480px;
-    padding: 2rem;
-    color: #ffffff;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-}
-#settings-card h2 { font-size: 1.4rem; font-weight: 800; color: #fff; margin-bottom: 0.4rem; }
+#settings-card { background: #141414; border: 1px solid #262626; border-radius: 12px; width: 90%; max-width: 440px; padding: 2rem; color: #ffffff; }
+#settings-card h2 { font-size: 1.3rem; font-weight: 800; margin-bottom: 0.4rem; }
 #settings-card hr { border: 0; height: 1px; background: #262626; margin-bottom: 1.2rem; }
-
-.setting-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1.2rem;
-}
+.setting-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; }
 .setting-row label { font-size: 0.95rem; font-weight: 600; color: #aaaaaa; }
-
-.setting-row input[type="checkbox"] {
-    width: 20px; height: 20px; accent-color: #ffffff; cursor: pointer;
-}
-.setting-row select {
-    background: #222222; color: white; border: 1px solid #333333;
-    padding: 0.5rem 0.8rem; font-size: 0.9rem; font-weight: 600;
-    border-radius: 6px; outline: none; min-width: 180px; cursor: pointer;
-}
-.setting-row select optgroup {
-    background: #141414;
-    color: #888888;
-    font-style: normal;
-    font-weight: 700;
-}
-
+.setting-row select { background: #222222; color: white; border: 1px solid #333333; padding: 0.5rem 0.8rem; font-size: 0.9rem; font-weight: 600; border-radius: 6px; min-width: 170px; }
 .slider-block { flex-direction: column; align-items: flex-start; gap: 0.6rem; }
 .slider-container { width: 100%; display: flex; justify-content: space-between; align-items: center; }
-.slider-container span { font-size: 0.85rem; color: #777; min-width: 100px; }
-.slider-container input[type="range"] { flex: 1; accent-color: #ffffff; cursor: pointer; }
-
-#settings-close {
-    width: 100%; background: #ffffff; color: #000000; font-weight: 800;
-    text-transform: uppercase; font-size: 0.9rem; letter-spacing: 0.05em;
-    padding: 0.8rem; border: none; border-radius: 6px; margin-top: 1rem;
-    cursor: pointer;
-}
-#settings-close:hover { background: #e6e6e6; }
+.slider-container span { font-size: 0.85rem; color: #777; min-width: 90px; }
+.slider-container input[type="range"] { flex: 1; accent-color: #ffffff; }
+#settings-close { width: 100%; background: #ffffff; color: #000000; font-weight: 800; padding: 0.8rem; border: none; border-radius: 6px; margin-top: 1rem; cursor: pointer; }

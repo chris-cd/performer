@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Core Chord Monitor</title>
+    <title>Core Chord Monitor & Musical Waterfall</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Oswald:wght@600;700&family=Roboto:wght@700;900&display=swap" rel="stylesheet">
@@ -24,11 +24,6 @@
             <h2>Performance Control Panel</h2>
             <hr>
             
-            <div class="setting-row">
-                <label for="set-prev-chord">Display Previous Chord Column</label>
-                <input type="checkbox" id="set-prev-chord" checked>
-            </div>
-
             <div class="setting-row">
                 <label for="set-composition">Lower Chord Composition View</label>
                 <select id="set-composition">
@@ -75,8 +70,8 @@
                     <input type="range" id="set-min-font" min="4" max="12" step="0.5" value="6">
                 </div>
                 <div class="slider-container">
-                    <span>Max: <span id="max-font-val">20</span>vw</span>
-                    <input type="range" id="set-max-font" min="12" max="28" step="0.5" value="20">
+                    <span>Max: <span id="max-font-val">25</span>vw</span>
+                    <input type="range" id="set-max-font" min="12" max="32" step="0.5" value="25">
                 </div>
             </div>
 
@@ -85,17 +80,15 @@
     </div>
 
     <div id="app-container">
-        <div id="left-zone" class="zone">
-            <div class="label">PREVIOUS</div>
-            <div id="prev-chord" class="chord-text">—</div>
-        </div>
-        
-        <div id="right-zone" class="zone">
+        <div id="center-zone" class="zone">
             <div class="label">CURRENT</div>
             <div id="current-chord" class="chord-text">—</div>
             <div id="note-composition-container"></div>
-            
-            <div id="live-notes-container"></div>
+        </div>
+
+        <div id="waterfall-zone" class="zone">
+            <div class="label">LIVE TIMELINE CASCADE</div>
+            <div id="waterfall-terminal"></div>
         </div>
     </div>
 

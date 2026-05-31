@@ -8,7 +8,7 @@ The original intent of this app is to be used on an external display, such as a 
 
 The app relies on the wonderful tonal (https://github.com/tonaljs/tonal) music theory library for Javascript.
 
-## 📋 Table of Contents
+## Table of Contents
 - [Scope](#-scope)
 - [Architecture](#-architecture)
 - [Performance Logic](#-performance-logic)
