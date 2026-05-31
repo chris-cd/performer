@@ -45,7 +45,7 @@ function normalizePitchClass(note) {
  * Advanced Interval-Distance Shell Identifier
  * Scans active note sets to identify specialized jazz/rhythm formulas.
  */
-function checkRootlessShellChords(noteLetters) {
+export function checkRootlessShellChords(noteLetters) {
     // Standardized sharp-based chromatic array
     const chrom = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
     
@@ -60,9 +60,7 @@ function checkRootlessShellChords(noteLetters) {
         const m3 = chrom[(r + 3) % 12];   // Minor 3rd
         const d7 = chrom[(r + 10) % 12];  // Minor 7th (Dominant 7th step)
 
-        // ---------------------------------------------------------------------
-        // 1. DOMINANT 13th SHELL CHECK (3rd + b7th + 13th)
-        // ---------------------------------------------------------------------
+        // 1. DOMINANT 13th CHECK (3rd + b7th + 13th)
         const d3 = chrom[(r + 4) % 12];
         const d13 = chrom[(r + 9) % 12];
         
@@ -70,9 +68,7 @@ function checkRootlessShellChords(noteLetters) {
             return rootName + "13";
         }
 
-        // ---------------------------------------------------------------------
-        // 2. MINOR 6th SHELL CHECK (b3rd + 5th + 6th) OR (b3rd + 6th)
-        // ---------------------------------------------------------------------
+        // 2. MINOR 6th CHECK (b3rd + 5th + 6th) OR (b3rd + 6th)
         const m5 = chrom[(r + 7) % 12];
         const m6 = chrom[(r + 9) % 12];
         
@@ -80,18 +76,14 @@ function checkRootlessShellChords(noteLetters) {
             return rootName + "m6";
         }
 
-        // ---------------------------------------------------------------------
-        // 3. MINOR 11th SHELL CHECK (b3rd + b7th + 11th)
-        // ---------------------------------------------------------------------
+        // 3. MINOR 11th CHECK (b3rd + b7th + 11th)
         const m11 = chrom[(r + 5) % 12];
         
         if (normalizedInputs.includes(m3) && normalizedInputs.includes(d7) && normalizedInputs.includes(m11)) {
             return rootName + "m11";
         }
 
-        // ---------------------------------------------------------------------
-        // 4. MINOR 9th SHELL CHECK (b3rd + b7th + 9th)
-        // ---------------------------------------------------------------------
+        // 4. MINOR 9th CHECK (b3rd + b7th + 9th)
         const m9 = chrom[(r + 2) % 12];
         
         if (normalizedInputs.includes(m3) && normalizedInputs.includes(d7) && normalizedInputs.includes(m9)) {
@@ -120,7 +112,6 @@ export function bestChordFilter(chordList, bassNote, physicalKeyCount, noteLette
     // =========================================================================
     // PRIORITY 2: EXPLICIT ROOTED EXTENSION LOOKUP
     // =========================================================================
-    // If tonal did detect the extension, grab it immediately before lower filters swallow it
     const explicitTargets = ["13", "m6", "mi6", "min6", "m9", "mi9", "min9", "m11", "mi11", "min11"];
     for (let target of explicitTargets) {
         const foundExplicit = chordList.find(c => {
@@ -139,7 +130,6 @@ export function bestChordFilter(chordList, bassNote, physicalKeyCount, noteLette
     // =========================================================================
     if (physicalKeyCount === 3 || uniqueNoteCount === 3) {
         
-        // INTERCEPT: Override literal "m#5" choices back to standard Major triads
         const literalSharpFive = chordList.find(c => c.includes("m#5"));
         if (literalSharpFive) {
             const majorAlternative = chordList.find(c => {
@@ -151,7 +141,6 @@ export function bestChordFilter(chordList, bassNote, physicalKeyCount, noteLette
             }
         }
 
-        // SLASH RULE: There should never be a slash chord on a basic triad
         const pureRootChord = chordList.find(c => !c.includes('/'));
         if (pureRootChord) {
             return sanitizeTextFormatting(pureRootChord);
@@ -168,7 +157,6 @@ export function bestChordFilter(chordList, bassNote, physicalKeyCount, noteLette
         return sanitizeTextFormatting(pureRootChords[0]);
     }
 
-    // Attempt to maintain clean bass-inverted structures if available
     const normalizedBass = normalizePitchClass(bassNote);
     for (let chord of chordList) {
         if (chord.includes('/')) {

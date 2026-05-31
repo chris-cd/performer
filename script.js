@@ -3,27 +3,27 @@ import { Midi, Chord } from "./tonal.js";
 import { bestChordFilter, checkRootlessShellChords } from "./chordEngine.js";
 
 const BUFFER_WINDOW_MS = 90; 
-const MAX_WATERFALL_ROWS = 15; 
 
 let activeNotes = new Set();
-let instantFrameNotes = new Set();
-
 let currentChordName = "";
+let previousChordName = "";
 let rawMidiPitches = []; 
 let currentChordObject = null; 
 let bufferTimeout = null;
 
 const settings = {
+    prevChord: localStorage.getItem("set-prev-chord") !== "false",
     composition: localStorage.getItem("set-composition") || "degrees",
     theme: localStorage.getItem("set-theme") || "bw-dark",
     font: localStorage.getItem("set-font") || "system",
     minFont: parseFloat(localStorage.getItem("set-min-font")) || 6,
-    maxFont: parseFloat(localStorage.getItem("set-max-font")) || 38 
+    maxFont: parseFloat(localStorage.getItem("set-max-font")) || 38 // Extended to allow huge font scale ceilings
 };
 
 const currentDisplay = document.getElementById("current-chord");
+const prevDisplay = document.getElementById("prev-chord");
 const noteContainer = document.getElementById("note-composition-container");
-const waterfallTerminal = document.getElementById("waterfall-terminal");
+const leftZone = document.getElementById("left-zone");
 
 const toggleBtn = document.getElementById("settings-toggle");
 const overlay = document.getElementById("settings-overlay");
@@ -50,7 +50,6 @@ function handleMIDIMessage(message) {
 
     if (command === 0x90 && velocity > 0) {
         activeNotes.add(note);
-        instantFrameNotes.add(note);
         triggerBuffer();
     } 
     else if (command === 0x80 || (command === 0x90 && velocity === 0)) {
@@ -62,64 +61,18 @@ function handleMIDIMessage(message) {
 function triggerBuffer() {
     if (bufferTimeout) clearTimeout(bufferTimeout);
     bufferTimeout = setTimeout(() => {
-        const newlyDetectedChord = processChords();
-        commitInstantSnapshotToWaterfall(newlyDetectedChord);
+        processChords();
     }, BUFFER_WINDOW_MS);
 }
 
-function commitInstantSnapshotToWaterfall(confirmedChordName) {
-    if (instantFrameNotes.size === 0) return;
-
-    const sortedFramePitches = Array.from(instantFrameNotes).sort((a, b) => a - b);
-    instantFrameNotes.clear();
-
-    if (confirmedChordName) {
-        const chordRowEl = document.createElement("div");
-        chordRowEl.classList.add("waterfall-chord-row");
-        chordRowEl.textContent = confirmedChordName;
-        insertAtTop(chordRowEl);
-    }
-
-    const notesRowEl = document.createElement("div");
-    notesRowEl.classList.add("waterfall-row");
-    
-    const polyphonyCount = sortedFramePitches.length;
-    notesRowEl.setAttribute("data-count", polyphonyCount > 6 ? 6 : polyphonyCount);
-
-    sortedFramePitches.forEach(midi => {
-        const brickEl = document.createElement("div");
-        brickEl.classList.add("wf-note-brick");
-
-        let noteName = Midi.midiToNoteName(midi).replace(/\d/, '');
-        noteName = noteName.substring(0, 1).toUpperCase() + noteName.substring(1);
-        
-        brickEl.textContent = noteName;
-        notesRowEl.appendChild(brickEl);
-    });
-
-    insertAtTop(notesRowEl);
-
-    while (waterfallTerminal.children.length > MAX_WATERFALL_ROWS) {
-        waterfallTerminal.removeChild(waterfallTerminal.lastChild);
-    }
-}
-
-function insertAtTop(element) {
-    if (waterfallTerminal.firstChild) {
-        waterfallTerminal.insertBefore(element, waterfallTerminal.firstChild);
-    } else {
-        waterfallTerminal.appendChild(element);
-    }
-}
-
 function processChords() {
-    // If no keys are being held down, clean reset the engine state entirely
     if (activeNotes.size === 0) {
+        // Clear engine state on absolute release so display updates safely
         currentChordName = "";
         currentChordObject = null;
         rawMidiPitches = [];
         updateUI();
-        return null;
+        return;
     }
 
     rawMidiPitches = Array.from(activeNotes).sort((a, b) => a - b);
@@ -127,7 +80,7 @@ function processChords() {
     const uniqueNoteLetters = Array.from(new Set(noteNamesWithOctaves.map(n => n.replace(/\d/, ''))));
     const lowestNoteName = noteNamesWithOctaves[0].replace(/\d/, '');
 
-    // FIX STEP 1: Always test custom extension shells first before checking standard libraries
+    // Step 1: Intercept custom extension signatures first
     const upperLetters = uniqueNoteLetters.map(n => n.toUpperCase());
     const fallbackShell = checkRootlessShellChords(upperLetters);
 
@@ -136,20 +89,19 @@ function processChords() {
     if (fallbackShell) {
         finalResolvedName = fallbackShell;
     } else {
-        // FIX STEP 2: Use Tonal.js detection as a secondary fallback choice
+        // Step 2: Fall back onto library tracking if nothing matched our direct extension layouts
         const detectedChords = Chord.detect(noteNamesWithOctaves);
         if (detectedChords && detectedChords.length > 0) {
             finalResolvedName = bestChordFilter(detectedChords, lowestNoteName, activeNotes.size, uniqueNoteLetters);
         }
     }
 
-    // FIX STEP 3: If both lookups fail, force wipe old data so the display doesn't repeat old positions
-    let chordNameToReturn = null;
+    // Step 3: Shift registers smoothly to track PREVIOUS vs CURRENT historical logs
     if (finalResolvedName) {
         if (finalResolvedName !== currentChordName) {
+            previousChordName = currentChordName;
             currentChordName = finalResolvedName;
             currentChordObject = Chord.get(currentChordName);
-            chordNameToReturn = currentChordName;
         }
     } else {
         currentChordName = "";
@@ -157,18 +109,25 @@ function processChords() {
     }
     
     updateUI();
-    return chordNameToReturn;
 }
 
 function updateUI() {
     currentDisplay.textContent = currentChordName ? currentChordName : "—";
+    prevDisplay.textContent = previousChordName ? previousChordName : "—";
 
+    // Smooth Alpha Fading matching CSS curve speeds
     if (activeNotes.size === 0 && currentChordName) {
         currentDisplay.style.opacity = "0.25";
         noteContainer.style.opacity = "0.3";
     } else {
         currentDisplay.style.opacity = "1.0";
         noteContainer.style.opacity = "1.0";
+    }
+
+    if (settings.prevChord && previousChordName) {
+        leftZone.style.display = "flex";
+    } else {
+        leftZone.style.display = "none";
     }
 
     noteContainer.innerHTML = ""; 
@@ -185,7 +144,6 @@ function updateUI() {
             if (settings.composition === "notes") {
                 noteBox.textContent = styledName;
             } else if (settings.composition === "degrees" && currentChordObject) {
-                // Safe check if interval array mapping exists for custom manual shell entries
                 const intervalDistance = (currentChordObject.intervals && currentChordObject.intervals[index]) ? currentChordObject.intervals[index] : "•";
                 noteBox.textContent = intervalDistance;
             }
@@ -197,6 +155,7 @@ function updateUI() {
 
     setTimeout(() => {
         adjustFontSize(currentDisplay);
+        adjustFontSize(prevDisplay);
     }, 0);
 }
 
@@ -266,7 +225,9 @@ document.getElementById("set-max-font").addEventListener("input", (e) => {
 
 const resizeObserver = new ResizeObserver(() => {
     adjustFontSize(currentDisplay);
+    adjustFontSize(prevDisplay);
 });
-resizeObserver.observe(document.getElementById("center-zone"));
+resizeObserver.observe(document.getElementById("left-zone"));
+resizeObserver.observe(document.getElementById("right-zone"));
 
 initializeSettingsPanel();
