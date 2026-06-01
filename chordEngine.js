@@ -1,28 +1,31 @@
 import { Midi, Chord } from "./tonal.js";
+import ChordRuleEngine from "./ruleEngine.js";
+
+// Import all rule modules
+import * as IntervalRules from "./rules/intervalRules.js";
+import * as FallbackRules from "./rules/fallbackRules.js";
+import * as FormattingRules from "./rules/formattingRules.js";
+
+// ============================================
+// CONSTANTS AND UTILITIES
+// ============================================
 
 const FLATTENED_PITCHES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
-export function sanitizeTextFormatting(name) {
-    if (!name) return null;
-    let clean = name;
-    clean = clean.replace(/no\d+/g, '');
-    if (/^[A-G][#b]?M$/.test(clean)) clean = clean.replace("M", "");
-    if (/^[A-G][#b]?M\//.test(clean)) clean = clean.replace("M/", "/");
-    if (/^[A-G][#b]?M\d/.test(clean)) clean = clean.replace("M", "");
-    return clean;
-}
+const ACCIDENTAL_MAP = {
+    "DB": "C#", "EB": "D#", "FB": "E", "E#": "F",
+    "GB": "F#", "AB": "G#", "BB": "A#", "CB": "B", "B#": "C"
+};
 
-function normalizePitchClass(note) {
+/**
+ * Normalize pitch class - convert enharmonic equivalents
+ */
+export function normalizePitchClass(note) {
     if (!note) return "";
     let cleanNote = note.toUpperCase().replace(/\d/g, '');
     
-    const accidentalMap = {
-        "DB": "C#", "EB": "D#", "FB": "E", "E#": "F",
-        "GB": "F#", "AB": "G#", "BB": "A#", "CB": "B", "B#": "C"
-    };
-    
-    if (accidentalMap[cleanNote]) {
-        cleanNote = accidentalMap[cleanNote];
+    if (ACCIDENTAL_MAP[cleanNote]) {
+        cleanNote = ACCIDENTAL_MAP[cleanNote];
     }
     
     if (cleanNote.endsWith("BB")) {
@@ -37,6 +40,9 @@ function normalizePitchClass(note) {
     return cleanNote;
 }
 
+/**
+ * Calculate semitone intervals from root
+ */
 function getSemitoneIntervals(rootMidi, rawMidiArray) {
     const rootChromValue = rootMidi % 12;
     return rawMidiArray.map(m => {
@@ -46,6 +52,22 @@ function getSemitoneIntervals(rootMidi, rawMidiArray) {
     });
 }
 
+/**
+ * Sanitize text formatting (legacy function, now also a rule)
+ */
+export function sanitizeTextFormatting(name) {
+    if (!name) return null;
+    let clean = name;
+    clean = clean.replace(/no\d+/g, '');
+    if (/^[A-G][#b]?M$/.test(clean)) clean = clean.replace("M", "");
+    if (/^[A-G][#b]?M\//.test(clean)) clean = clean.replace("M/", "/");
+    if (/^[A-G][#b]?M\d/.test(clean)) clean = clean.replace("M", "");
+    return clean;
+}
+
+/**
+ * Rootless shell chord detection (legacy function)
+ */
 export function checkRootlessShellChords(noteLetters, favoredBassLetter = null) {
     const normalizedInputs = noteLetters.map(normalizePitchClass);
     
@@ -90,152 +112,193 @@ export function checkRootlessShellChords(noteLetters, favoredBassLetter = null) 
     return null;
 }
 
-export function bestChordFilter(chordList, bassNote, physicalKeyCount, noteLetters, currentActiveChordName = "", rawActiveMidiArray = [], bendingMidiNotes = []) {
+// ============================================
+// CHORD RULE ENGINE FACTORY
+// ============================================
+
+/**
+ * Create and configure a ChordFilterEngine with all rules
+ * This sets up the plugin architecture with all available rules
+ * You can enable/disable rules as needed
+ */
+export function createChordRuleEngine() {
+    const engine = new ChordRuleEngine();
+    
+    // Set shared context for all rules
+    engine.setContext({
+        FLATTENED_PITCHES,
+        Midi,
+        normalizePitchClass,
+        accidentalMap: ACCIDENTAL_MAP
+    });
+    
+    // Register all interval-based detection rules
+    engine.registerRule(IntervalRules.BendHoldCheckRule.name, IntervalRules.BendHoldCheckRule);
+    engine.registerRule(IntervalRules.Minor9Rule.name, IntervalRules.Minor9Rule);
+    engine.registerRule(IntervalRules.MajorTriadSafetyRule.name, IntervalRules.MajorTriadSafetyRule);
+    engine.registerRule(IntervalRules.FullyDiminished7Rule.name, IntervalRules.FullyDiminished7Rule);
+    engine.registerRule(IntervalRules.HalfDiminished7Rule.name, IntervalRules.HalfDiminished7Rule);
+    engine.registerRule(IntervalRules.Minor11Rule.name, IntervalRules.Minor11Rule);
+    engine.registerRule(IntervalRules.Dominant7Sharp9Rule.name, IntervalRules.Dominant7Sharp9Rule);
+    engine.registerRule(IntervalRules.Dominant9Rule.name, IntervalRules.Dominant9Rule);
+    engine.registerRule(IntervalRules.Dominant7Flat5Rule.name, IntervalRules.Dominant7Flat5Rule);
+    engine.registerRule(IntervalRules.Dominant7Flat13Rule.name, IntervalRules.Dominant7Flat13Rule);
+    engine.registerRule(IntervalRules.G6addB9Rule.name, IntervalRules.G6addB9Rule);
+    engine.registerRule(IntervalRules.Dominant13Rule.name, IntervalRules.Dominant13Rule);
+    engine.registerRule(IntervalRules.Sus4With9Rule.name, IntervalRules.Sus4With9Rule);
+    engine.registerRule(IntervalRules.Major7Rule.name, IntervalRules.Major7Rule);
+    engine.registerRule(IntervalRules.Dominant7AndMinor7Rule.name, IntervalRules.Dominant7AndMinor7Rule);
+    engine.registerRule(IntervalRules.Minor6Rule.name, IntervalRules.Minor6Rule);
+    
+    // Register all fallback rules
+    engine.registerRule(FallbackRules.BassMatchingRule.name, FallbackRules.BassMatchingRule);
+    engine.registerRule(FallbackRules.BassLeadMatchRule.name, FallbackRules.BassLeadMatchRule);
+    engine.registerRule(FallbackRules.RootlessShellChordRule.name, FallbackRules.RootlessShellChordRule);
+    engine.registerRule(FallbackRules.ExplicitTargetRule.name, FallbackRules.ExplicitTargetRule);
+    engine.registerRule(FallbackRules.PureRootChordRule.name, FallbackRules.PureRootChordRule);
+    engine.registerRule(FallbackRules.AnyChordRule.name, FallbackRules.AnyChordRule);
+    
+    // Register formatting rules
+    engine.registerRule(FormattingRules.SanitizeTextFormattingRule.name, FormattingRules.SanitizeTextFormattingRule);
+    engine.registerRule(FormattingRules.NormalizePitchClassRule.name, FormattingRules.NormalizePitchClassRule);
+    engine.registerRule(FormattingRules.EnforceTriadRulesRule.name, FormattingRules.EnforceTriadRulesRule);
+    engine.registerRule(FormattingRules.AllowComplexVoicingRule.name, FormattingRules.AllowComplexVoicingRule);
+    engine.registerRule(FormattingRules.UppercaseNormalizationRule.name, FormattingRules.UppercaseNormalizationRule);
+    
+    // Enable all rules by default
+    engine.enableAll();
+    
+    return engine;
+}
+
+// Singleton engine instance
+let globalRuleEngine = null;
+
+export function getGlobalRuleEngine() {
+    if (!globalRuleEngine) {
+        globalRuleEngine = createChordRuleEngine();
+    }
+    return globalRuleEngine;
+}
+
+// ============================================
+// FORMATTING HELPER
+// ============================================
+
+/**
+ * Apply formatting rules to a detected chord name
+ */
+function applyFormattingRules(chordName, ruleData) {
+    if (!chordName) return null;
+    
+    let result = chordName;
+    
+    // Apply text sanitization
+    result = FormattingRules.SanitizeTextFormattingRule.execute(null, { chordName: result });
+    if (!result) return null;
+    
+    // Apply uppercase normalization
+    result = FormattingRules.UppercaseNormalizationRule.execute(null, { chordName: result });
+    if (!result) return null;
+    
+    // For 3-note voicings, enforce triads (strip slashes)
+    if (ruleData.uniqueNoteCount === 3 || ruleData.physicalKeyCount === 3) {
+        result = FormattingRules.EnforceTriadRulesRule.execute(null, { 
+            chordName: result, 
+            physicalKeyCount: ruleData.physicalKeyCount,
+            uniqueNoteCount: ruleData.uniqueNoteCount
+        });
+    }
+    
+    return result || chordName;
+}
+
+// ============================================
+// MAIN CHORD FILTER FUNCTION (Plugin-Based)
+// ============================================
+
+/**
+ * Main chord filtering function using the rule engine
+ * Processes MIDI data through a configurable pipeline of chord detection rules
+ * 
+ * @param {Array<string>} chordList - Tonal.js detected chords
+ * @param {string} bassNote - Lowest note name
+ * @param {number} physicalKeyCount - Number of active MIDI notes
+ * @param {Array<string>} noteLetters - Note name letters
+ * @param {string} currentActiveChordName - Previously detected chord
+ * @param {Array<number>} rawActiveMidiArray - Raw MIDI note values
+ * @param {Array<number>} bendingMidiNotes - Notes with active pitch bends
+ * @returns {string|null} - Final chord name
+ */
+export function bestChordFilter(
+    chordList, 
+    bassNote, 
+    physicalKeyCount, 
+    noteLetters, 
+    currentActiveChordName = "", 
+    rawActiveMidiArray = [], 
+    bendingMidiNotes = []
+) {
     let upperLetters = noteLetters.map(n => n.toUpperCase()).map(normalizePitchClass);
     let normalizedBass = normalizePitchClass(bassNote);
-
-    // RESTORED WITH SMART RELEASE: If a real string expression bend is in progress on an active note, protect the current label
-    if (bendingMidiNotes && bendingMidiNotes.length > 0 && currentActiveChordName) {
-        const matchingFrettedBend = bendingMidiNotes.some(bm => rawActiveMidiArray.includes(bm));
-        if (matchingFrettedBend) {
-            return currentActiveChordName;
-        }
+    
+    // CHORD VALIDITY GATE: A chord requires minimum 3 unique notes
+    // Single notes and dual note combinations do not constitute valid chords
+    // They should only appear in the Cascade view, not update CURRENT display
+    if (upperLetters.length < 3) {
+        return null;
     }
-
-    if (rawActiveMidiArray && rawActiveMidiArray.length > 0) {
-        const sortedMidi = [...rawActiveMidiArray].sort((a, b) => a - b);
-        const rootMidi = sortedMidi[0];
-        const relativeIntervals = getSemitoneIntervals(rootMidi, sortedMidi);
-        const rootNoteName = Midi.midiToNoteName(rootMidi).replace(/\d/, '');
-        const displayRoot = normalizePitchClass(rootNoteName);
-
-        // Fully Diminished 7th structures
-        if (relativeIntervals.includes(3) && relativeIntervals.includes(6) && relativeIntervals.includes(9)) {
-            return displayRoot + "dim7";
-        }
-
-        // Half-Diminished 7th structures
-        if (relativeIntervals.includes(3) && relativeIntervals.includes(6) && relativeIntervals.includes(10)) {
-            return displayRoot + "m7b5";
-        }
-
-        // Minor 11 shell voicings
-        if (relativeIntervals.includes(3) && relativeIntervals.includes(10) && relativeIntervals.includes(5)) {
-            return displayRoot + "m11";
-        }
-
-        // Dominant 7 sharp 9 structure (Hendrix Chord)
-        if (relativeIntervals.includes(10) && relativeIntervals.includes(4) && relativeIntervals.includes(3)) {
-            return displayRoot + "7#9";
-        }
-
-        // Dominant 9th drop structures
-        if (relativeIntervals.includes(10) && relativeIntervals.includes(4) && relativeIntervals.includes(2)) {
-            return displayRoot + "9";
-        }
-
-        // Dominant 7 flat 5 drop frames
-        if (relativeIntervals.includes(10) && relativeIntervals.includes(4) && relativeIntervals.includes(6)) {
-            return displayRoot + "7b5";
-        }
-
-        // Dominant 7 flat 13 shapes
-        if (relativeIntervals.includes(10) && relativeIntervals.includes(4) && relativeIntervals.includes(8)) {
-            return displayRoot + "7b13";
-        }
-
-        // G6addb9 tracking distributions
-        if (relativeIntervals.includes(1) && relativeIntervals.includes(4) && relativeIntervals.includes(9)) {
-            return displayRoot + "6addb9";
-        }
-
-        // Dominant 13 structures
-        if (relativeIntervals.includes(4) && relativeIntervals.includes(10) && relativeIntervals.includes(9)) {
-            return displayRoot + "13";
-        }
-
-        // 9sus4 intercept blocks
-        if (relativeIntervals.includes(5) && relativeIntervals.includes(10) && relativeIntervals.includes(2)) {
-            return displayRoot + "9sus4";
-        }
-
-        // Major 7 structures
-        if (relativeIntervals.includes(11)) {
-            if (relativeIntervals.includes(1)) {
-                const ghostMidiValue = sortedMidi.find(m => (m % 12) === ((rootMidi + 1) % 12));
-                if (ghostMidiValue) {
-                    const ghostLetter = Midi.midiToNoteName(ghostMidiValue).replace(/\d/, '').toUpperCase();
-                    upperLetters = upperLetters.filter(n => normalizePitchClass(n) !== normalizePitchClass(ghostLetter));
-                }
-            }
-            if (upperLetters.includes(normalizePitchClass(bassNote))) {
-                const hasThird = relativeIntervals.includes(4);
-                const hasFifth = relativeIntervals.includes(7);
-                if (hasThird || hasFifth) {
-                    return displayRoot + "Maj7";
-                }
-            }
-        }
-
-        // Minor 7 / Dominant 7 validation routing engine
-        if (relativeIntervals.includes(10)) {
-            if (relativeIntervals.includes(1)) {
-                const ghostMidiValue = sortedMidi.find(m => (m % 12) === ((rootMidi + 1) % 12));
-                if (ghostMidiValue) {
-                    const ghostLetter = Midi.midiToNoteName(ghostMidiValue).replace(/\d/, '').toUpperCase();
-                    upperLetters = upperLetters.filter(n => normalizePitchClass(n) !== normalizePitchClass(ghostLetter));
-                }
-            }
-
-            if (relativeIntervals.includes(4)) {
-                return displayRoot + "7";
-            }
-            
-            if (!relativeIntervals.includes(9)) {
-                return displayRoot + "m7";
-            }
-        }
-
-        if (relativeIntervals.includes(3) && (relativeIntervals.includes(9) || relativeIntervals.includes(8))) {
-            return displayRoot + "m6";
-        }
+    
+    // Prepare data object for rule engine
+    const ruleData = {
+        // Original parameters
+        chordList,
+        bassNote,
+        physicalKeyCount,
+        noteLetters: upperLetters,
+        currentActiveChordName,
+        rawActiveMidiArray,
+        bendingMidiNotes,
+        
+        // Derived data
+        upperLetters,
+        normalizedBass,
+        uniqueNoteCount: upperLetters.length,
+        
+        // MIDI analysis data
+        sortedMidi: rawActiveMidiArray.length > 0 ? [...rawActiveMidiArray].sort((a, b) => a - b) : [],
+        rootMidi: rawActiveMidiArray.length > 0 ? [...rawActiveMidiArray].sort((a, b) => a - b)[0] : null,
+        relativeIntervals: rawActiveMidiArray.length > 0 
+            ? getSemitoneIntervals(
+                [...rawActiveMidiArray].sort((a, b) => a - b)[0],
+                [...rawActiveMidiArray].sort((a, b) => a - b)
+              )
+            : null,
+        displayRoot: null, // Will be set below
+        
+        // Helper functions and utilities
+        normalizePitchClass,
+        FLATTENED_PITCHES,
+        Midi,
+        
+        // Current chord name (for formatting pass-through)
+        chordName: null
+    };
+    
+    // Calculate display root if MIDI data available
+    if (ruleData.sortedMidi.length > 0) {
+        const rootNoteName = Midi.midiToNoteName(ruleData.rootMidi).replace(/\d/, '');
+        ruleData.displayRoot = normalizePitchClass(rootNoteName);
     }
-
-    const uniqueNoteCount = upperLetters.length;
-
-    if (physicalKeyCount === 3 || uniqueNoteCount === 3) {
-        const perfectBassMatch = chordList.find(c => {
-            const base = c.split('/')[0];
-            return normalizePitchClass(base).startsWith(normalizedBass);
-        });
-        if (perfectBassMatch) return sanitizeTextFormatting(perfectBassMatch);
-
-        const pureRootChord = chordList.find(c => !c.includes('/'));
-        if (pureRootChord) return sanitizeTextFormatting(pureRootChord);
+    
+    // Get the global rule engine and execute the pipeline
+    const engine = getGlobalRuleEngine();
+    const detectedChord = engine.execute(ruleData);
+    
+    // Apply formatting rules to the detected chord
+    if (detectedChord) {
+        return applyFormattingRules(detectedChord, ruleData);
     }
-
-    if (chordList && chordList.length > 0) {
-        const bassLeadMatch = chordList.find(c => normalizePitchClass(c.split('/')[0]).startsWith(normalizedBass));
-        if (bassLeadMatch) return sanitizeTextFormatting(bassLeadMatch);
-    }
-
-    const shellMatch = checkRootlessShellChords(upperLetters, bassNote);
-    if (shellMatch) return sanitizeTextFormatting(shellMatch);
-
-    if (!chordList || chordList.length === 0) return null;
-
-    const explicitTargets = ["dim7", "m7b5", "m11", "7#9", "9", "7b5", "7b13", "7", "13", "9sus4", "Maj7", "m7", "m6", "mi6", "min6", "m9"];
-    for (let target of explicitTargets) {
-        const foundExplicit = chordList.find(c => {
-            const base = c.split('/')[0];
-            const cleanBase = base.replace(new RegExp("^" + normalizedBass), "");
-            return cleanBase === target || base.endsWith(target);
-        });
-        if (foundExplicit) return sanitizeTextFormatting(foundExplicit);
-    }
-
-    const pureRootChords = chordList.filter(c => !c.includes('/'));
-    if (pureRootChords.length > 0) return sanitizeTextFormatting(pureRootChords[0]);
-
-    return sanitizeTextFormatting(chordList[0]);
+    
+    return null;
 }
