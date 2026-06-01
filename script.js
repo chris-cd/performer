@@ -122,95 +122,80 @@ function getQuantizedActiveNotes() {
     return Array.from(resolvedNotes).sort((a, b) => a - b);
 }
 
-function createNewWaterfallLineContainer() {
-    const newRow = document.createElement("div");
-    newRow.classList.add("waterfall-row");
-    newRow.style.display = "flex";
-    newRow.style.flexWrap = "wrap";
-    newRow.style.alignItems = "center";
-    newRow.style.gap = "6px";
-    newRow.style.padding = "6px 0";
-    newRow.style.borderBottom = "1px solid rgba(255,255,255,0.05)";
-    
-    insertAtTop(newRow);
-    currentActiveWaterfallRow = newRow;
-    activeRowTrackLength = 0;
-
-    pruneWaterfallOverflow();
+function pruneWaterfallOverflow() {
+    while (waterfallNotesColumn.children.length > MAX_WATERFALL_ROWS) {
+        waterfallNotesColumn.removeChild(waterfallNotesColumn.lastChild);
+    }
+    while (waterfallChordsColumn.children.length > MAX_WATERFALL_ROWS) {
+        waterfallChordsColumn.removeChild(waterfallChordsColumn.lastChild);
+    }
 }
 
-function pruneWaterfallOverflow() {
-    while (waterfallTerminal.children.length > MAX_WATERFALL_ROWS) {
-        waterfallTerminal.removeChild(waterfallTerminal.lastChild);
+// A generalized helper to insert an element at the top of a given container
+function insertAtTop(element, container) {
+    if (container.firstChild) {
+        container.insertBefore(element, container.firstChild);
+    } else {
+        container.appendChild(element);
     }
 }
 
 function commitInstantSnapshotToWaterfall(confirmedChordName) {
     const activePitches = getQuantizedActiveNotes();
-    if (activePitches.length === 0) return;
-
     const displayChordLabel = confirmedChordName || currentChordName;
 
-    const uniqueClassTracker = new Set();
-    const filteredPitchesForUI = activePitches.filter(pitch => {
-        let name = Midi.midiToNoteName(pitch).replace(/\d/, '').toUpperCase();
-        if (name === "A#") name = "BB";
-        if (name === "D#") name = "EB";
-        if (name === "G#") name = "AB";
-        if (name === "C#") name = "DB";
-        if (uniqueClassTracker.has(name)) return false;
-        uniqueClassTracker.add(name);
-        return true;
-    });
+    // --- Notes Column Logic ---
+    const notesRowEl = document.createElement("div");
+    notesRowEl.classList.add("wf-row-entry", "wf-note-row");
+    
+    if (activePitches.length === 0) {
+        // Display an empty or placeholder row if no notes are active
+        notesRowEl.textContent = "—";
+        notesRowEl.style.opacity = "0.3";
+    } else {
+        const uniqueClassTracker = new Set();
+        const filteredPitchesForUI = activePitches.filter(pitch => {
+            let name = Midi.midiToNoteName(pitch).replace(/\d/, '').toUpperCase();
+            if (name === "A#") name = "BB";
+            if (name === "D#") name = "EB";
+            if (name === "G#") name = "AB";
+            if (name === "C#") name = "DB";
+            if (uniqueClassTracker.has(name)) return false;
+            uniqueClassTracker.add(name);
+            return true;
+        });
 
-    // Build standard pitch label arrays
-    const notesStringArray = [];
-    filteredPitchesForUI.forEach(midi => {
-        let noteName = Midi.midiToNoteName(midi).replace(/\d/, '');
-        noteName = noteName.substring(0, 1).toUpperCase() + noteName.substring(1);
-        
-        if (noteName === "A#") noteName = "Bb";
-        if (noteName === "D#") noteName = "Eb";
-        if (noteName === "G#") noteName = "Ab";
-        if (noteName === "C#") noteName = "Db";
-        
-        let detectedDirection = null;
-        for (let ch = 0; ch < 16; ch++) {
-            if (channelBendingDirections[ch].has(midi)) {
-                detectedDirection = channelBendingDirections[ch].get(midi);
-                break;
+        const notesStringArray = [];
+        filteredPitchesForUI.forEach(midi => {
+            let noteName = Midi.midiToNoteName(midi).replace(/\d/, '');
+            noteName = noteName.substring(0, 1).toUpperCase() + noteName.substring(1);
+            
+            if (noteName === "A#") noteName = "Bb";
+            if (noteName === "D#") noteName = "Eb";
+            if (noteName === "G#") noteName = "Ab";
+            if (noteName === "C#") noteName = "Db";
+            
+            let detectedDirection = null;
+            for (let ch = 0; ch < 16; ch++) {
+                if (channelBendingDirections[ch].has(midi)) {
+                    detectedDirection = channelBendingDirections[ch].get(midi);
+                    break;
+                }
+                const currentBendOffset = channelPitchBends[ch];
+                const semitoneShift = Math.round((currentBendOffset / 8192) * 2.0);
+                const baseFretEstimate = midi - semitoneShift;
+                if (channelBendingDirections[ch].has(baseFretEstimate)) {
+                    detectedDirection = channelBendingDirections[ch].get(baseFretEstimate);
+                    break;
+                }
             }
-            const currentBendOffset = channelPitchBends[ch];
-            const semitoneShift = Math.round((currentBendOffset / 8192) * 2.0);
-            const baseFretEstimate = midi - semitoneShift;
-            if (channelBendingDirections[ch].has(baseFretEstimate)) {
-                detectedDirection = channelBendingDirections[ch].get(baseFretEstimate);
-                break;
-            }
-        }
 
-        if (detectedDirection === "up") noteName += "↗";
-        else if (detectedDirection === "down") noteName += "↘";
-        
-        notesStringArray.push(noteName);
-    });
+            if (detectedDirection === "up") noteName += "↗";
+            else if (detectedDirection === "down") noteName += "↘";
+            
+            notesStringArray.push(noteName);
+        });
 
-    const formattedNotesText = `[${notesStringArray.join(" ")}]`;
-
-    // ==========================================
-    // VIEW MODE 1: ORIGINAL VERTICAL EVENT STREAM
-    // ==========================================
-    if (settings.waterfallMode === "stream") {
-        if (displayChordLabel && displayChordLabel !== lastWaterfallChordName) {
-            const chordRowEl = document.createElement("div");
-            chordRowEl.classList.add("waterfall-chord-row");
-            chordRowEl.textContent = displayChordLabel;
-            insertAtTop(chordRowEl);
-            lastWaterfallChordName = displayChordLabel;
-        }
-
-        const notesRowEl = document.createElement("div");
-        notesRowEl.classList.add("waterfall-row");
         const polyphonyCount = filteredPitchesForUI.length;
         notesRowEl.setAttribute("data-count", polyphonyCount > 6 ? 6 : polyphonyCount);
 
@@ -223,71 +208,26 @@ function commitInstantSnapshotToWaterfall(confirmedChordName) {
             brickEl.textContent = noteStr;
             notesRowEl.appendChild(brickEl);
         });
-
-        insertAtTop(notesRowEl);
-        pruneWaterfallOverflow();
-        return;
     }
 
-    // ==========================================
-    // VIEW MODE 2: HORIZONTAL PHRASE WRAPPING
-    // ==========================================
-    if (!currentActiveWaterfallRow) {
-        createNewWaterfallLineContainer();
-    }
+    insertAtTop(notesRowEl, waterfallNotesColumn);
 
-    const sequenceGroupEl = document.createElement("div");
-    sequenceGroupEl.style.display = "inline-flex";
-    sequenceGroupEl.style.alignItems = "center";
-    sequenceGroupEl.style.gap = "4px";
-    sequenceGroupEl.style.marginRight = "4px";
 
-    if (displayChordLabel && displayChordLabel !== lastWaterfallChordName) {
-        const chordLabelTag = document.createElement("span");
-        chordLabelTag.style.fontWeight = "bold";
-        chordLabelTag.style.color = "#ffffff";
-        chordLabelTag.style.background = "rgba(255,255,255,0.15)";
-        chordLabelTag.style.padding = "1px 5px";
-        chordLabelTag.style.borderRadius = "3px";
-        chordLabelTag.style.fontSize = "0.85rem";
-        chordLabelTag.textContent = displayChordLabel;
-        sequenceGroupEl.appendChild(chordLabelTag);
-        
-        lastWaterfallChordName = displayChordLabel;
-        activeRowTrackLength += displayChordLabel.length + 2;
-    }
+    // --- Chords Column Logic ---
+    const chordRowEl = document.createElement("div");
+    chordRowEl.classList.add("wf-row-entry", "wf-chord-entry");
 
-    const notesWrapperSpan = document.createElement("span");
-    notesWrapperSpan.style.color = "rgba(255, 255, 255, 0.75)";
-    notesWrapperSpan.style.fontSize = "0.85rem";
-    notesWrapperSpan.textContent = formattedNotesText;
-    sequenceGroupEl.appendChild(notesWrapperSpan);
-
-    activeRowTrackLength += formattedNotesText.length;
-
-    if (activeRowTrackLength >= ROW_CHAR_LIMIT) {
-        createNewWaterfallLineContainer();
-        currentActiveWaterfallRow.appendChild(sequenceGroupEl);
-        activeRowTrackLength = displayChordLabel.length + formattedNotesText.length;
+    if (displayChordLabel) {
+        chordRowEl.textContent = displayChordLabel;
+        lastWaterfallChordName = displayChordLabel; // Update lastWaterfallChordName here
     } else {
-        if (currentActiveWaterfallRow.children.length > 0) {
-            const delimiterSpan = document.createElement("span");
-            delimiterSpan.style.color = "rgba(255,255,255,0.25)";
-            delimiterSpan.style.margin = "0 2px";
-            delimiterSpan.textContent = "➔";
-            currentActiveWaterfallRow.appendChild(delimiterSpan);
-            activeRowTrackLength += 2;
-        }
-        currentActiveWaterfallRow.appendChild(sequenceGroupEl);
+        chordRowEl.textContent = "—"; // Placeholder if no chord is detected
+        chordRowEl.style.opacity = "0.3";
     }
-}
+    
+    insertAtTop(chordRowEl, waterfallChordsColumn);
 
-function insertAtTop(element) {
-    if (waterfallTerminal.firstChild) {
-        waterfallTerminal.insertBefore(element, waterfallTerminal.firstChild);
-    } else {
-        waterfallTerminal.appendChild(element);
-    }
+    pruneWaterfallOverflow();
 }
 
 function processChords() {
@@ -452,14 +392,6 @@ document.getElementById("set-font").addEventListener("change", (e) => {
     localStorage.setItem("set-font", settings.font);
     document.body.setAttribute("data-font", settings.font);
     updateUI();
-});
-document.getElementById("set-waterfall-mode").addEventListener("change", (e) => {
-    settings.waterfallMode = e.target.value;
-    localStorage.setItem("set-waterfall-mode", settings.waterfallMode);
-    waterfallTerminal.innerHTML = ""; // Flush stream layout tracking nodes on view shift
-    currentActiveWaterfallRow = null;
-    activeRowTrackLength = 0;
-    updateUI(false);
 });
 document.getElementById("set-min-font").addEventListener("input", (e) => {
     settings.minFont = parseFloat(e.target.value);
