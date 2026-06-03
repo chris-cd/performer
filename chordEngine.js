@@ -128,6 +128,7 @@ export function createChordRuleEngine() {
     engine.setContext({
         FLATTENED_PITCHES,
         Midi,
+        Chord,
         normalizePitchClass,
         accidentalMap: ACCIDENTAL_MAP
     });
@@ -153,6 +154,7 @@ export function createChordRuleEngine() {
     // Register all fallback rules
     engine.registerRule(FallbackRules.BassMatchingRule.name, FallbackRules.BassMatchingRule);
     engine.registerRule(FallbackRules.BassLeadMatchRule.name, FallbackRules.BassLeadMatchRule);
+    engine.registerRule(FallbackRules.OctaveWeightingRule.name, FallbackRules.OctaveWeightingRule);
     engine.registerRule(FallbackRules.RootlessShellChordRule.name, FallbackRules.RootlessShellChordRule);
     engine.registerRule(FallbackRules.ExplicitTargetRule.name, FallbackRules.ExplicitTargetRule);
     engine.registerRule(FallbackRules.PureRootChordRule.name, FallbackRules.PureRootChordRule);
@@ -242,10 +244,13 @@ export function bestChordFilter(
     let upperLetters = noteLetters.map(n => n.toUpperCase()).map(normalizePitchClass);
     let normalizedBass = normalizePitchClass(bassNote);
     
-    // CHORD VALIDITY GATE: A chord requires minimum 3 unique notes
-    // Single notes and dual note combinations do not constitute valid chords
-    // They should only appear in the Cascade view, not update CURRENT display
-    if (upperLetters.length < 3) {
+    // CHORD VALIDITY GATE: prefer at least 3 unique pitch-classes, but also allow
+    // cases where the player has three or more physical notes (doublings across
+    // octaves) even if unique-letter count is less than 3. This ensures common
+    // doubled-voicings like `F F A` (two Fs across octaves + A) are still
+    // considered for chord detection instead of being silently ignored.
+    if (upperLetters.length < 3 && physicalKeyCount < 3) {
+        try { console.log('[ChordGate] blocked - uniqueLetters=', upperLetters.length, 'physicalKeys=', physicalKeyCount, 'letters=', upperLetters); } catch (e) {}
         return null;
     }
     
@@ -284,6 +289,15 @@ export function bestChordFilter(
         // Current chord name (for formatting pass-through)
         chordName: null
     };
+    // Build octave-aware pitch-class counts from raw MIDI if available
+    ruleData.pitchClassCounts = {};
+    if (rawActiveMidiArray && rawActiveMidiArray.length > 0) {
+        rawActiveMidiArray.forEach(midiVal => {
+            const noteName = Midi.midiToNoteName(midiVal).replace(/\d/, '');
+            const norm = normalizePitchClass(noteName);
+            ruleData.pitchClassCounts[norm] = (ruleData.pitchClassCounts[norm] || 0) + 1;
+        });
+    }
     
     // Calculate display root if MIDI data available
     if (ruleData.sortedMidi.length > 0) {

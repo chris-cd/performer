@@ -48,6 +48,105 @@ export const BassLeadMatchRule = {
 };
 
 /**
+ * Octave Weighting Rule
+ * Scores detected chord candidates using octave-aware pitch-class counts
+ * Prefers chords whose chord tones match the most frequently occurring pitch classes,
+ * rewards compact octave clusters, and gives bonus for explicit bass matches.
+ */
+export const OctaveWeightingRule = {
+    name: 'octaveWeighting',
+    type: 'filter',
+    priority: 60,
+    description: 'Score chord candidates by octave-weighted pitch-class counts',
+    execute(context, data) {
+        const { chordList, normalizedBass, normalizePitchClass, pitchClassCounts, rawActiveMidiArray } = data;
+        if (!chordList || chordList.length <= 1) return null;
+
+        // Tunable weights
+        const baseMatchWeight = 1.2; // per octave occurrence
+        const perNoteProximityWeight = 0.8; // reward when multiple matches of same chord tone are close in octave
+        const clusterWeight = 1.5; // reward when all matched chord tones are clustered closely
+        const explicitBassBonus = 4;
+        const rootMatchBonus = 2;
+
+        const rawMidi = Array.isArray(rawActiveMidiArray) ? rawActiveMidiArray.slice().sort((a,b) => a - b) : [];
+
+        const scores = new Map();
+        for (const c of chordList) {
+            const base = c.split('/')[0];
+            let chordObj = null;
+            try { chordObj = context.Chord.get(base); } catch (e) { chordObj = null; }
+
+            const chordNotes = (chordObj && (chordObj.notes || chordObj.tones || chordObj.pcset || [])) || [];
+            let score = 0;
+            const allMatched = [];
+
+            // For each chord tone, count octave matches and reward proximity among those matches
+            chordNotes.forEach(n => {
+                const pc = normalizePitchClass(n);
+                const matched = rawMidi.filter(m => {
+                    const nm = context.Midi.midiToNoteName(m).replace(/\d/, '');
+                    return normalizePitchClass(nm) === pc;
+                }).sort((a,b) => a - b);
+
+                const count = matched.length;
+                if (count > 0) {
+                    score += count * baseMatchWeight;
+                    allMatched.push(...matched);
+
+                    if (count > 1) {
+                        const spreadOctaves = (matched[matched.length - 1] - matched[0]) / 12.0;
+                        const proximityScore = Math.max(0, 2 - spreadOctaves) * perNoteProximityWeight;
+                        score += proximityScore;
+                    }
+                }
+            });
+
+            // Cluster proximity across all matched chord tones (prefer compact voicings)
+            if (allMatched.length > 1) {
+                const overallSpreadOctaves = (allMatched[allMatched.length - 1] - allMatched[0]) / 12.0;
+                const clusterScore = Math.max(0, 2 - overallSpreadOctaves) * clusterWeight;
+                score += clusterScore;
+            }
+
+            // Bonus if detected bass aligns with chord's expected bass/root
+            if (normalizedBass) {
+                const bassBase = c.split('/')[1] || null; // explicit slash bass
+                if (bassBase) {
+                    const normBassLead = normalizePitchClass(bassBase);
+                    if (normBassLead === normalizedBass) score += explicitBassBonus;
+                } else {
+                    // If no explicit bass, prefer chords whose root matches normalizedBass
+                    const rootName = chordNotes.length > 0 ? normalizePitchClass(chordNotes[0]) : null;
+                    if (rootName === normalizedBass) score += rootMatchBonus;
+                }
+            }
+
+            scores.set(c, score);
+        }
+
+        // Choose highest scoring chord (ties prefer earlier candidate)
+        let best = null;
+        let bestScore = -1;
+        for (const c of chordList) {
+            const s = scores.get(c) || 0;
+            if (s > bestScore) { bestScore = s; best = c; }
+        }
+
+        // Debug: print scoring breakdown to console for inspection
+        try {
+            const scoreObj = {};
+            for (const [k, v] of scores.entries()) scoreObj[k] = v;
+            console.log('[OctaveWeighting] rawMidi=', rawActiveMidiArray, 'scores=', scoreObj, 'selected=', best, 'score=', bestScore);
+        } catch (e) {
+            // ignore console failures
+        }
+
+        return bestScore > 0 ? best : null;
+    }
+};
+
+/**
  * Rootless Shell Chord Rule
  * Detects chord voicings without the root note
  */
@@ -78,12 +177,12 @@ export const RootlessShellChordRule = {
             const d7 = FLATTENED_PITCHES[(r + 10) % 12];
             const d13 = FLATTENED_PITCHES[(r + 9) % 12];
             const d3 = FLATTENED_PITCHES[(r + 4) % 12];
-            
+
             // 13th voicing: 3, b7, 13
             if (normalizedInputs.includes(d3) && normalizedInputs.includes(d7) && normalizedInputs.includes(d13)) {
                 return rootName + '13';
             }
-            
+
             // Minor 6: m3, 6 (but not b5)
             const m6 = FLATTENED_PITCHES[(r + 9) % 12];
             if (normalizedInputs.includes(m3) && normalizedInputs.includes(m6)) {
@@ -92,13 +191,13 @@ export const RootlessShellChordRule = {
                     return rootName + 'm6';
                 }
             }
-            
+
             // Minor 11: m3, b7, 11
             const m11 = FLATTENED_PITCHES[(r + 5) % 12];
             if (normalizedInputs.includes(m3) && normalizedInputs.includes(d7) && normalizedInputs.includes(m11)) {
                 return rootName + 'm11';
             }
-            
+
             // Minor 9: m3, b7, 9
             const m9 = FLATTENED_PITCHES[(r + 2) % 12];
             if (normalizedInputs.includes(m3) && normalizedInputs.includes(d7) && normalizedInputs.includes(m9)) {

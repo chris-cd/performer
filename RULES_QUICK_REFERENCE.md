@@ -1,9 +1,5 @@
 # Quick Reference: Chord Rules Plugin System
 
-## TL;DR
-
-Your chord detection code is now modular. The public API hasn't changed, but you can now enable/disable rules.
-
 ## File Locations
 
 ```

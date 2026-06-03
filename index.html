@@ -42,6 +42,75 @@
             </div>
 
             <div class="setting-row">
+                <label for="set-show-octave">Show Octave Labels & Doubled Styling</label>
+                <input type="checkbox" id="set-show-octave" />
+            </div>
+
+            <div class="setting-row">
+                <label for="set-compact-cascade">Compact Cascade (fit up to 6 notes)</label>
+                <input type="checkbox" id="set-compact-cascade" />
+            </div>
+
+            <div class="setting-row slider-block">
+                <label>Ghost-note Filter: Hold Window (ms)</label>
+                <div class="slider-container">
+                    <span><span id="ghost-hold-val">300</span> ms</span>
+                    <input type="range" id="set-ghost-hold" min="0" max="1000" step="25" value="300">
+                </div>
+                <small style="color:#888;margin-top:6px;display:block;">During this window after an accepted chord, singleton new notes are treated as transients.</small>
+            </div>
+
+            <div class="setting-row slider-block">
+                <label>Ghost-note Filter: Overlap Threshold (%)</label>
+                <div class="slider-container">
+                    <span><span id="ghost-overlap-val">60</span>%</span>
+                    <input type="range" id="set-ghost-overlap" min="0" max="100" step="5" value="60">
+                </div>
+                <small style="color:#888;margin-top:6px;display:block;">Minimum percent of previous chord pitch-classes that must still be present to trigger transient filtering.</small>
+            </div>
+
+            <div class="setting-row slider-block">
+                <label>Chord Confirmation Count</label>
+                <div class="slider-container">
+                    <span><span id="confirm-count-val">2</span> windows</span>
+                    <input type="range" id="set-confirm-count" min="1" max="4" step="1" value="2">
+                </div>
+                <small style="color:#888;margin-top:6px;display:block;">Require this many consecutive identical chord detections before accepting a new chord.</small>
+            </div>
+
+            <div class="setting-row slider-block">
+                <label>Chord Acceptance: Minimum Match (%)</label>
+                <div class="slider-container">
+                    <span><span id="confirm-match-val">50</span>%</span>
+                    <input type="range" id="set-confirm-match" min="0" max="100" step="5" value="50">
+                </div>
+                <small style="color:#888;margin-top:6px;display:block;">Minimum percent pitch-class match between successive detections to confirm a chord.</small>
+            </div>
+
+            <div class="setting-row slider-block">
+                <label>Chord Root Preference: Bass Weight</label>
+                <div class="slider-container">
+                    <span><span id="bass-weight-val">4.0</span></span>
+                    <input type="range" id="set-bass-weight" min="0" max="8" step="0.1" value="4.0">
+                </div>
+                <small style="color:#888;margin-top:6px;display:block;">Higher value makes candidates matching the bass more dominant.</small>
+            </div>
+
+            <div class="setting-row slider-block">
+                <label>Sticky Retention: Keep Chord If Overlap (%)</label>
+                <div class="slider-container">
+                    <span><span id="sticky-retention-val">60</span>%</span>
+                    <input type="range" id="set-sticky-retention" min="0" max="100" step="5" value="60">
+                </div>
+                <small style="color:#888;margin-top:6px;display:block;">If current notes overlap this % with last accepted chord, retain it.</small>
+            </div>
+
+            <div class="setting-row">
+                <label for="set-performance-mode">Performance Mode (low-latency)</label>
+                <input type="checkbox" id="set-performance-mode" />
+            </div>
+
+            <div class="setting-row">
                 <label for="set-theme">Visual Interface Color Scheme</label>
                 <select id="set-theme">
                     <optgroup label="Dark Themes (Stage Standard)">
